@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Catcher Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 24px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+  <script>
+    let scene, camera, renderer;
+    let catcher;
+    let fallingObjects = [];
+    let score = 0;
+
+    init();
+    animate();
+
+    function init() {
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Light
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(0, 10, 10);
+      scene.add(light);
+
+      // Catcher
+      const catcherGeometry = new THREE.BoxGeometry(2, 0.5, 2);
+      const catcherMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+      catcher = new THREE.Mesh(catcherGeometry, catcherMaterial);
+      catcher.position.y = -5;
+      scene.add(catcher);
+
+      // Camera position
+      camera.position.z = 12;
+
+      // Controls
+      document.addEventListener('mousemove', (event) => {
+        const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        catcher.position.x = mouseX * 7;
+      });
+
+      // Spawn objects
+      setInterval(createFallingObject, 1000);
+
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    function createFallingObject() {
+      const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+      const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+      const object = new THREE.Mesh(geometry, material);
+
+      object.position.x = (Math.random() - 0.5) * 14;
+      object.position.y = 8;
+
+      scene.add(object);
+      fallingObjects.push(object);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      for (let i = 0; i < fallingObjects.length; i++) {
+        const obj = fallingObjects[i];
+        obj.position.y -= 0.08;
+
+        // Collision detection
+        if (
+          obj.position.y < catcher.position.y + 1 &&
+          obj.position.y > catcher.position.y - 1 &&
+          Math.abs(obj.position.x - catcher.position.x) < 1.5
+        ) {
+          scene.remove(obj);
+          fallingObjects.splice(i, 1);
+          score++;
+          document.getElementById('score').innerText = 'Score: ' + score;
+          i--;
+        }
+
+        // Remove missed objects
+        if (obj.position.y < -10) {
+          scene.remove(obj);
+          fallingObjects.splice(i, 1);
+          i--;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+  </script>
+</body>
+</html>
